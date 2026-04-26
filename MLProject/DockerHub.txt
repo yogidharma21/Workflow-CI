@@ -1,6 +1,10 @@
 Docker Hub Image:
 https://hub.docker.com/r/yogidharma21/credit-card-fraud-model
 
+Tags:
+- latest
+- 794385632783d2bd6788433adffacd49dd4e2218
+
 Perintah untuk pull image:
 docker pull yogidharma21/credit-card-fraud-model:latest
 
