@@ -32,7 +32,7 @@ DATA_PATH = os.path.join(
     "credit_card_fraud_preprocessing.csv"
 )
 
-# Konfigurasi DagsHub via environment variables (di-set di GitHub Actions)
+# Konfigurasi DagsHub via environment variables
 DAGSHUB_USERNAME  = os.environ.get("DAGSHUB_USERNAME", "yogidharma21")
 DAGSHUB_REPO_NAME = os.environ.get("DAGSHUB_REPO_NAME", "Eksperimen_SML_Yogi-Dharma")
 DAGSHUB_TOKEN     = os.environ.get("DAGSHUB_TOKEN", "")
@@ -44,15 +44,8 @@ if DAGSHUB_TOKEN:
     mlflow.set_tracking_uri(TRACKING_URI)
     print(f"[INFO] MLflow tracking ke DagsHub: {TRACKING_URI}")
 else:
-    mlflow.set_tracking_uri("mlruns")
     print("[INFO] MLflow tracking lokal (mlruns)")
 
-mlflow.set_experiment("Credit_Card_Fraud_CI")
-
-
-# ============================================================
-# HELPER: Plot & Artefak
-# ============================================================
 
 def plot_confusion_matrix(y_test, y_pred, save_path):
     cm = confusion_matrix(y_test, y_pred)
@@ -107,17 +100,12 @@ def save_classification_report(y_test, y_pred, save_path):
         json.dump(report, f, indent=4)
 
 
-# ============================================================
-# MAIN TRAINING
-# ============================================================
-
 def main():
     print("=" * 60)
     print("  CI TRAINING — Credit Card Fraud Detection")
     print("  Author: Yogi-Dharma")
     print("=" * 60)
 
-    # Load data
     df = pd.read_csv(DATA_PATH)
     X  = df.drop(columns=["IsFraud"])
     y  = df["IsFraud"]
@@ -128,7 +116,6 @@ def main():
     )
     print(f"[INFO] Train: {X_train.shape}, Test: {X_test.shape}")
 
-    # Hyperparameter tuning
     param_dist = {
         "n_estimators"     : [100, 200, 300],
         "max_depth"        : [5, 10, 15, None],
@@ -138,29 +125,22 @@ def main():
     }
 
     base_model = RandomForestClassifier(
-        class_weight="balanced",
-        random_state=42,
-        n_jobs=-1
+        class_weight="balanced", random_state=42, n_jobs=-1
     )
 
     search = RandomizedSearchCV(
         estimator=base_model,
         param_distributions=param_dist,
-        n_iter=20,
-        scoring="f1",
-        cv=3,
-        random_state=42,
-        n_jobs=-1,
-        verbose=1
+        n_iter=20, scoring="f1", cv=3,
+        random_state=42, n_jobs=-1, verbose=1
     )
 
-    print("\n[INFO] Menjalankan RandomizedSearchCV (20 iter, cv=3)...")
+    print("\n[INFO] Menjalankan RandomizedSearchCV...")
     search.fit(X_train, y_train)
     best_model  = search.best_estimator_
     best_params = search.best_params_
     print(f"[INFO] Best params: {best_params}")
 
-    # Evaluasi
     y_pred = best_model.predict(X_test)
     y_prob = best_model.predict_proba(X_test)[:, 1]
 
@@ -174,7 +154,6 @@ def main():
         "cv_best_score"    : search.best_score_,
     }
 
-    # Buat artefak
     artifact_dir = os.path.join(BASE_DIR, "artifacts")
     os.makedirs(artifact_dir, exist_ok=True)
 
@@ -188,31 +167,27 @@ def main():
     plot_feature_importance(best_model, list(X.columns), fi_path)
     save_classification_report(y_test, y_pred, report_path)
 
-    # MLflow logging
-    with mlflow.start_run(run_name="CI_RandomForest_Tuning"):
+    # ── Log langsung ke active run MLflow Project ──────────────
+    mlflow.log_params(best_params)
+    mlflow.log_param("n_iter_search", 20)
+    mlflow.log_param("cv_folds", 3)
+    mlflow.log_param("class_weight", "balanced")
 
-        mlflow.log_params(best_params)
-        mlflow.log_param("n_iter_search", 20)
-        mlflow.log_param("cv_folds", 3)
-        mlflow.log_param("class_weight", "balanced")
+    for name, val in metrics.items():
+        mlflow.log_metric(name, val)
 
-        for name, val in metrics.items():
-            mlflow.log_metric(name, val)
+    model_dir = os.path.join(artifact_dir, "random_forest_model")
+    mlflow.sklearn.save_model(best_model, model_dir)
+    mlflow.log_artifacts(model_dir, artifact_path="random_forest_model")
 
-        # Log model (sklearn flavor lengkap)
-        model_dir = os.path.join(artifact_dir, "random_forest_model")
-        mlflow.sklearn.save_model(best_model, model_dir)
-        mlflow.log_artifacts(model_dir, artifact_path="random_forest_model")
+    mlflow.log_artifact(cm_path,     artifact_path="plots")
+    mlflow.log_artifact(roc_path,    artifact_path="plots")
+    mlflow.log_artifact(fi_path,     artifact_path="plots")
+    mlflow.log_artifact(report_path, artifact_path="reports")
 
-        # Log artefak tambahan
-        mlflow.log_artifact(cm_path,     artifact_path="plots")
-        mlflow.log_artifact(roc_path,    artifact_path="plots")
-        mlflow.log_artifact(fi_path,     artifact_path="plots")
-        mlflow.log_artifact(report_path, artifact_path="reports")
-
-        print("\n[RESULT] === Metrik Evaluasi ===")
-        for k, v in metrics.items():
-            print(f"  {k:<22}: {v:.4f}")
+    print("\n[RESULT] === Metrik Evaluasi ===")
+    for k, v in metrics.items():
+        print(f"  {k:<22}: {v:.4f}")
 
     print("\n[DONE] Training selesai dan tercatat di MLflow!")
 
