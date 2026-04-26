@@ -1,7 +1,0 @@
-Docker Hub Image:
-https://hub.docker.com/r/yogidharma21/credit-card-fraud-model
-
-Perintah untuk pull image:
-docker pull yogidharma21/credit-card-fraud-model:latest
-
-Author: Yogi-Dharma
