@@ -48,7 +48,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add MLProject/artifacts/
+          git add MLProject/saved_model/
           git diff --cached --quiet || git commit -m "chore: update model artifacts from CI run [skip ci]"
           git push
         env:
@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: model-artifacts
-          path: MLProject/artifacts/
+          path: MLProject/saved_model/
           retention-days: 30
 
       # ── 7. Login ke Docker Hub ────────────────────────────────
@@ -73,7 +73,7 @@ jobs:
       - name: Build Docker Image (mlflow build-docker)
         run: |
           mlflow models build-docker \
-            --model-uri "MLProject/artifacts/random_forest_model" \
+            --model-uri "MLProject/saved_model" \
             --name "${{ secrets.DOCKERHUB_USERNAME }}/credit-card-fraud-model"
 
       # ── 9. Push Docker Image ke Docker Hub ───────────────────
