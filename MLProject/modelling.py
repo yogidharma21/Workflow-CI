@@ -166,6 +166,9 @@ def main():
         mlflow.log_metric(name, val)
 
     model_dir = os.path.join(artifact_dir, "random_forest_model")
+    import shutil
+    if os.path.exists(model_dir):
+        shutil.rmtree(model_dir)
     mlflow.sklearn.save_model(best_model, model_dir)
     mlflow.log_artifacts(model_dir, artifact_path="random_forest_model")
 
