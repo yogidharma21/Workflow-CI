@@ -23,6 +23,8 @@ from sklearn.metrics import (
 # modelling.py — MLProject Entry Point
 # Credit Card Fraud Detection — CI Workflow
 # Author: Yogi-Dharma
+# CATATAN: Tracking URI di-set via env var MLFLOW_TRACKING_URI
+#          oleh GitHub Actions, jangan override di sini
 # ============================================================
 
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
@@ -31,20 +33,6 @@ DATA_PATH = os.path.join(
     "credit_card_fraud_dataset_preprocessing",
     "credit_card_fraud_preprocessing.csv"
 )
-
-# Konfigurasi DagsHub via environment variables
-DAGSHUB_USERNAME  = os.environ.get("DAGSHUB_USERNAME", "yogidharma21")
-DAGSHUB_REPO_NAME = os.environ.get("DAGSHUB_REPO_NAME", "Eksperimen_SML_Yogi-Dharma")
-DAGSHUB_TOKEN     = os.environ.get("DAGSHUB_TOKEN", "")
-
-if DAGSHUB_TOKEN:
-    os.environ["MLFLOW_TRACKING_USERNAME"] = DAGSHUB_USERNAME
-    os.environ["MLFLOW_TRACKING_PASSWORD"] = DAGSHUB_TOKEN
-    TRACKING_URI = f"https://dagshub.com/{DAGSHUB_USERNAME}/{DAGSHUB_REPO_NAME}.mlflow"
-    mlflow.set_tracking_uri(TRACKING_URI)
-    print(f"[INFO] MLflow tracking ke DagsHub: {TRACKING_URI}")
-else:
-    print("[INFO] MLflow tracking lokal (mlruns)")
 
 
 def plot_confusion_matrix(y_test, y_pred, save_path):
@@ -104,6 +92,7 @@ def main():
     print("=" * 60)
     print("  CI TRAINING — Credit Card Fraud Detection")
     print("  Author: Yogi-Dharma")
+    print(f"  Tracking URI: {mlflow.get_tracking_uri()}")
     print("=" * 60)
 
     df = pd.read_csv(DATA_PATH)
@@ -167,7 +156,7 @@ def main():
     plot_feature_importance(best_model, list(X.columns), fi_path)
     save_classification_report(y_test, y_pred, report_path)
 
-    # ── Log langsung ke active run MLflow Project ──────────────
+    # Log langsung ke active run (dibuat oleh mlflow run)
     mlflow.log_params(best_params)
     mlflow.log_param("n_iter_search", 20)
     mlflow.log_param("cv_folds", 3)
@@ -188,8 +177,7 @@ def main():
     print("\n[RESULT] === Metrik Evaluasi ===")
     for k, v in metrics.items():
         print(f"  {k:<22}: {v:.4f}")
-
-    print("\n[DONE] Training selesai dan tercatat di MLflow!")
+    print("\n[DONE] Training selesai!")
 
 
 if __name__ == "__main__":
