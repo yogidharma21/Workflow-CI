@@ -1,4 +1,4 @@
-name: CI — MLflow Training & Docker Build
+name: CI — MLflow Training
 
 on:
   push:
@@ -13,32 +13,27 @@ permissions:
 
 jobs:
   build:
-    name: Train Model + Push Docker
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      # ── 2. Setup Python ──────────────────────────────────────
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # ── 3. Install Dependencies ───────────────────────────────
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install mlflow==2.19.0 pandas numpy scikit-learn
 
-      # ── 4. Run MLflow Project ─────────────────────────────────
       - name: Run MLflow Project
         run: |
           mlflow run MLProject/ --env-manager=local
 
-      # ── 5. Simpan mlruns ke GitHub Repository ─────────────────
-      - name: Save mlruns to repo
+      - name: Save mlruns to GitHub Repository
         run: |
           git config --global user.name ${{ secrets.GIT_USERNAME }}
           git config --global user.email ${{ secrets.GIT_EMAIL }}
@@ -48,52 +43,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 6. Upload Artifacts ke GitHub Actions ─────────────────
-      - name: Upload mlruns Artifact
+      - name: Upload mlruns as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mlruns
           path: mlruns/
           retention-days: 30
-
-      # ── 7. Login ke Docker Hub ────────────────────────────────
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # ── 8. Build Docker Image ─────────────────────────────────
-      - name: Build Docker Image (mlflow build-docker)
-        run: |
-          MODEL_URI=$(python -c "
-          import mlflow
-          client = mlflow.tracking.MlflowClient()
-          runs = client.search_runs('0', order_by=['start_time DESC'], max_results=1)
-          print('runs:/' + runs[0].info.run_id + '/model')
-          ")
-          echo "Model URI: $MODEL_URI"
-          mlflow models build-docker \
-            --model-uri "$MODEL_URI" \
-            --name "${{ secrets.DOCKERHUB_USERNAME }}/credit-card-fraud-model"
-
-      # ── 9. Push Docker Image ──────────────────────────────────
-      - name: Push Docker Image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/credit-card-fraud-model:latest
-
-      # ── 10. Update DockerHub.txt ──────────────────────────────
-      - name: Update DockerHub.txt
-        run: |
-          cat > MLProject/DockerHub.txt << EOF
-          Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/credit-card-fraud-model
-          Pull: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/credit-card-fraud-model:latest
-          Author: Yogi-Dharma
-          EOF
-          git config --global user.name ${{ secrets.GIT_USERNAME }}
-          git config --global user.email ${{ secrets.GIT_EMAIL }}
-          git add MLProject/DockerHub.txt
-          git diff --cached --quiet || git commit -m "chore: update DockerHub link [skip ci]"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
