@@ -5,7 +5,13 @@ conda_env: conda.yaml
 entry_points:
   main:
     parameters:
-      n_estimators: {type: int, default: 200}
-      max_depth: {type: int, default: 10}
-      dataset: {type: string, default: "credit_card_fraud_preprocessing.csv"}
-    command: "python modelling.py {n_estimators} {max_depth} {dataset}"
+      file_path:
+        type: string
+        default: "credit_card_fraud_dataset_preprocessing/credit_card_fraud_preprocessing.csv"
+      n_estimators:
+        type: int
+        default: 100
+      max_depth:
+        type: int
+        default: 5
+    command: "python modelling.py {file_path} {n_estimators} {max_depth}"
