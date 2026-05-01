@@ -1,47 +1,32 @@
-name: MLflow CI
+name: CI MLflow
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
   train:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        pip install mlflow scikit-learn==1.5.2 pandas numpy imbalanced-learn
+      - name: Install dependencies
+        run: |
+          pip install mlflow
 
-    - name: Run MLflow Project
-      run: |
-        mlflow run MLProject --env-manager=local
-
-    - name: Upload mlruns artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: mlruns
-        path: mlruns
-
-    - name: Build Docker Image
-      run: |
-        mlflow models build-docker -m mlruns/0/*/artifacts/model -n fraud-model
-
-    - name: Login Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Push Docker Image
-      run: |
-        docker tag fraud-model ${{ secrets.DOCKER_USERNAME }}/fraud-model:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/fraud-model:latest
+      - name: Run MLflow Project (Training)
+        env:
+          DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          DAGSHUB_REPO_NAME: ${{ secrets.DAGSHUB_REPO_NAME }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          mlflow run MLProject --env-manager=local

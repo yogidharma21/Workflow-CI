@@ -1,12 +1,13 @@
-name: fraud-env
+name: mlflow-env
+
 channels:
   - defaults
+
 dependencies:
   - python=3.10
   - pip
   - pip:
       - mlflow
-      - scikit-learn==1.5.2
       - pandas
+      - scikit-learn
       - numpy
-      - imbalanced-learn

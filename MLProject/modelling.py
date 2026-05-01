@@ -1,44 +1,26 @@
-import pandas as pd
 import mlflow
-import mlflow.sklearn
-
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, roc_auc_score, f1_score
-
-from imblearn.over_sampling import SMOTE
+from sklearn.metrics import accuracy_score
 
 mlflow.set_experiment("Credit_Card_Fraud_Detection")
 
-df = pd.read_csv("credit_card_fraud_preprocessing.csv")
+df = pd.read_csv("../credit_card_fraud_preprocessing.csv")
 
-X = df.drop("IsFraud", axis=1)
-y = df["IsFraud"]
+X = df.drop("Class", axis=1)
+y = df["Class"]
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X, y, test_size=0.2, random_state=42
 )
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
 
-smote = SMOTE()
-X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
 
-with mlflow.start_run():
-    model = RandomForestClassifier(class_weight="balanced", random_state=42)
-    model.fit(X_train_res, y_train_res)
+mlflow.log_param("model", "RandomForest")
+mlflow.log_metric("accuracy", acc)
 
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]
-
-    f1 = f1_score(y_test, y_pred)
-    roc = roc_auc_score(y_test, y_prob)
-
-    mlflow.log_metric("f1_score", f1)
-    mlflow.log_metric("roc_auc", roc)
-
-    mlflow.sklearn.log_model(
-        model,
-        "model",
-        input_example=X_train.iloc[:5]
-    )
-
-    print(classification_report(y_test, y_pred))
+print(f"Accuracy: {acc}")
