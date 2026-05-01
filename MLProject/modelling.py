@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score
 
 mlflow.set_experiment("Credit_Card_Fraud_Detection")
 
-df = pd.read_csv("../credit_card_fraud_preprocessing.csv")
+df = pd.read_csv("credit_card_fraud_preprocessing.csv")
 
 X = df.drop("Class", axis=1)
 y = df["Class"]
