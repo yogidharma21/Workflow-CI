@@ -1,17 +1,5 @@
-name: credit_card_fraud_detection
-
-conda_env: conda.yaml
+name: fraud_detection_project
 
 entry_points:
   main:
-    parameters:
-      file_path:
-        type: string
-        default: "credit_card_fraud_dataset_preprocessing/credit_card_fraud_preprocessing.csv"
-      n_estimators:
-        type: int
-        default: 100
-      max_depth:
-        type: int
-        default: 5
-    command: "python modelling.py {file_path} {n_estimators} {max_depth}"
+    command: "python modelling.py"
